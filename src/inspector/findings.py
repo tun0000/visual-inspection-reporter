@@ -18,6 +18,7 @@ from inspector.config import (
     CLASS_NAMES_ZH,
     CROP_EXPAND,
     CROP_MIN_SIDE,
+    CROP_UPSCALE_BELOW,
 )
 from inspector.detector import Detection
 
@@ -101,7 +102,12 @@ def crop_finding(
     top = max(0, round(cy - half_h))
     right = min(w, round(cx + half_w))
     bottom = min(h, round(cy + half_h))
-    return image.crop((left, top, right, bottom))
+    crop = image.crop((left, top, right, bottom))
+
+    # 小裁切放大再送 VLM：解析度不足時模型會把細微瑕疵（如殘銅細線）誤判為誤檢
+    if max(crop.size) < CROP_UPSCALE_BELOW:
+        crop = crop.resize((crop.width * 2, crop.height * 2), Image.LANCZOS)
+    return crop
 
 
 def findings_to_json(fi: ImageFindings) -> list[dict]:
