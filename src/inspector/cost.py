@@ -1,0 +1,53 @@
+"""單次執行的 token 用量與成本統計。
+
+token 數一律取 API 回傳的實際 usage；金額以 config.MODEL_PRICING 的
+付費層官方定價換算（免費層實際帳單為 $0，報告標示為估算值）。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from inspector.config import MODEL_PRICING, USD_TO_TWD
+from inspector.providers.base import Usage
+
+
+@dataclass
+class ModelCost:
+    model_id: str
+    calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+    @property
+    def usd(self) -> float | None:
+        pricing = MODEL_PRICING.get(self.model_id)
+        if pricing is None:
+            return None  # 未登錄定價的模型：報告標「未知定價」
+        return (
+            self.input_tokens * pricing.input_usd_per_m
+            + self.output_tokens * pricing.output_usd_per_m
+        ) / 1_000_000
+
+
+@dataclass
+class CostMeter:
+    by_model: dict[str, ModelCost] = field(default_factory=dict)
+    cache_hits: int = 0
+
+    def add(self, usage: Usage) -> None:
+        mc = self.by_model.setdefault(usage.model_id, ModelCost(usage.model_id))
+        mc.calls += 1
+        mc.input_tokens += usage.input_tokens
+        mc.output_tokens += usage.output_tokens
+
+    def add_cache_hit(self) -> None:
+        self.cache_hits += 1
+
+    @property
+    def total_usd(self) -> float:
+        return sum(mc.usd or 0.0 for mc in self.by_model.values())
+
+    @property
+    def total_twd(self) -> float:
+        return self.total_usd * USD_TO_TWD
