@@ -1,6 +1,13 @@
 # visual-inspection-reporter — v1 實作計畫
 
-> 狀態：計畫已核准（2026-07-08）。M0 起的實作等使用者明確說「開始做 v1」才動工。
+> 狀態（2026-07-08）：**M0–M6 全部完成**。M3 檢查點後使用者授權全權處理，
+> 品質迭代（裁切放大 + prompt v2）與 M4–M6 一次做完。
+> 實作中的決策補記：
+> - `gemini-3.1-flash-lite` 對細微殘銅會誤判誤檢（放大裁切也一樣）；
+>   `gemini-3.5-flash` 對照實測全對但貴 ~15 倍 → 預設維持 lite，README 記錄取捨。
+> - OpenAI adapter 用 Responses API（`responses.parse` + `text_format`），
+>   `gpt-5.4-nano` 單張實測通過。
+> - Gradio 為 v6（theme/css 移到 launch()），app 已驗證 HTTP 200。
 > 本檔為工作計畫，隨討論持續修訂。
 
 ## Context
