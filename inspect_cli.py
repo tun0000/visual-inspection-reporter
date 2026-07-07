@@ -43,12 +43,22 @@ def main() -> None:
     load_dotenv(REPO_ROOT / ".env")
     args = parse_args()
 
-    from inspector.pipeline import run_detection
+    from inspector.pipeline import run_batch
+    from inspector.report import render_report
 
-    results = run_detection(args.input_dir, args.output, conf=args.conf)
+    batch = run_batch(
+        args.input_dir,
+        args.output,
+        provider_name=args.provider,
+        model_id=args.model,
+        conf=args.conf,
+        workers=args.max_workers,
+        use_cache=not args.no_cache,
+        detect_only=args.detect_only,
+    )
 
-    print(f"\n偵測完成：{len(results)} 張影像")
-    for r in results:
+    print(f"\n偵測完成：{len(batch.results)} 張影像")
+    for r in batch.results:
         counts = Counter(f.detection.class_name for f in r.findings.findings)
         summary = ", ".join(f"{k}x{v}" for k, v in sorted(counts.items())) or "無瑕疵"
         print(f"  {r.findings.image_path.name}: {summary}")
@@ -57,7 +67,18 @@ def main() -> None:
         print(f"\n標註圖與裁切圖已存於 {args.output}/images、{args.output}/crops")
         return
 
-    raise SystemExit("VLM 評估與報告產出尚未實作（M2/M3 進行中），請先用 --detect-only。")
+    report_path = render_report(batch, args.output)
+    meter = batch.meter
+    print(f"\nVLM 評估完成（快取命中 {meter.cache_hits} 張）")
+    for r in batch.results:
+        from inspector.report import _image_verdict
+
+        print(f"  {r.findings.image_path.name}: {_image_verdict(r)}")
+    print(
+        f"\n成本估算：${meter.total_usd:.4f} USD ≈ NT${meter.total_twd:.2f}"
+        f"（付費層定價換算；免費層實際帳單 $0）"
+    )
+    print(f"報告：{report_path}")
 
 
 if __name__ == "__main__":
