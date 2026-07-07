@@ -1,0 +1,23 @@
+# secrets — never commit API keys
+.env
+
+# large artifacts — published on Hugging Face Hub instead (see README)
+weights/
+*.onnx
+*.pt
+
+# dataset images — HRIPCB license unknown; fetch instructions in README
+sample_images/
+
+# run outputs & VLM response cache
+output/
+.cache/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
