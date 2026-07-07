@@ -20,6 +20,7 @@ from inspector.config import (
     DEFAULT_MODELS,
     DEFAULT_PROVIDER,
     DEFAULT_WORKERS,
+    MAX_RPM,
     REPO_ROOT,
 )
 
@@ -34,6 +35,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default=None, help="VLM 模型 ID（預設依供應商，見 config.py）")
     parser.add_argument("--conf", type=float, default=DEFAULT_CONF, help="偵測信心閾值")
     parser.add_argument("--max-workers", type=int, default=DEFAULT_WORKERS, help="VLM 併發數")
+    parser.add_argument(
+        "--max-rpm", type=int, default=MAX_RPM, help="客戶端 RPM 限速（0 = 停用；預設對應免費層）"
+    )
     parser.add_argument("--no-cache", action="store_true", help="停用 VLM 回應快取")
     parser.add_argument("--detect-only", action="store_true", help="只跑偵測，不呼叫 VLM、不出報告")
     return parser.parse_args()
@@ -44,7 +48,7 @@ def main() -> None:
     args = parse_args()
 
     from inspector.pipeline import run_batch
-    from inspector.report import render_report
+    from inspector.report import _image_verdict, render_json, render_report
 
     batch = run_batch(
         args.input_dir,
@@ -53,6 +57,7 @@ def main() -> None:
         model_id=args.model,
         conf=args.conf,
         workers=args.max_workers,
+        max_rpm=args.max_rpm,
         use_cache=not args.no_cache,
         detect_only=args.detect_only,
     )
@@ -68,17 +73,16 @@ def main() -> None:
         return
 
     report_path = render_report(batch, args.output)
+    json_path = render_json(batch, args.output)
     meter = batch.meter
     print(f"\nVLM 評估完成（快取命中 {meter.cache_hits} 張）")
     for r in batch.results:
-        from inspector.report import _image_verdict
-
         print(f"  {r.findings.image_path.name}: {_image_verdict(r)}")
     print(
         f"\n成本估算：${meter.total_usd:.4f} USD ≈ NT${meter.total_twd:.2f}"
         f"（付費層定價換算；免費層實際帳單 $0）"
     )
-    print(f"報告：{report_path}")
+    print(f"報告：{report_path}（JSON：{json_path}）")
 
 
 if __name__ == "__main__":

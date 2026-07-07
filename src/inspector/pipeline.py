@@ -19,6 +19,7 @@ from inspector.config import (
     DEFAULT_WEIGHTS,
     DEFAULT_WORKERS,
     MAX_CROPS_PER_IMAGE,
+    MAX_RPM,
     VLM_ON_CLEAN,
 )
 from inspector.cost import CostMeter
@@ -31,6 +32,7 @@ from inspector.findings import (
     findings_to_json,
 )
 from inspector.providers.base import Usage, VLMProvider, VLMRequest, create_provider
+from inspector.retry import RateLimiter, vlm_retry
 from inspector.schema import ReconciledAssessment, reconcile
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
@@ -115,7 +117,7 @@ def run_detection(
 
 
 def _assess_one(
-    result: ImageResult, provider: VLMProvider, cache: VLMCache
+    result: ImageResult, provider: VLMProvider, cache: VLMCache, limiter: RateLimiter
 ) -> tuple[ReconciledAssessment, Usage, bool]:
     """單張影像的 VLM 評估（先查快取）。回傳 (對齊後評估, 用量, 是否快取命中)。"""
     image_bytes = result.findings.image_path.read_bytes()
@@ -133,7 +135,8 @@ def _assess_one(
         crops=[(fid, path.read_bytes()) for fid, path in sorted(result.crop_paths.items())],
         findings_json=fj,
     )
-    assessment, usage = provider.assess_image(request)
+    limiter.acquire()  # 只對真正打 API 的呼叫限速；快取命中不佔額度
+    assessment, usage = vlm_retry(provider.assess_image)(request)
     cache.put(key, assessment, usage)
     return reconcile(assessment, valid_ids), usage, False
 
@@ -147,6 +150,7 @@ def run_batch(
     conf: float = DEFAULT_CONF,
     weights: Path = DEFAULT_WEIGHTS,
     workers: int = DEFAULT_WORKERS,
+    max_rpm: int = MAX_RPM,
     use_cache: bool = True,
     detect_only: bool = False,
     vlm_on_clean: bool = VLM_ON_CLEAN,
@@ -162,11 +166,12 @@ def run_batch(
     if not detect_only:
         provider = create_provider(provider_name, model_id)
         cache = VLMCache(enabled=use_cache)
+        limiter = RateLimiter(max_rpm)
         # 無瑕疵影像預設跳過 VLM（成本槓桿）；報告直接標「合格（未檢出瑕疵）」
         todo = [r for r in results if r.findings.findings or vlm_on_clean]
 
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_assess_one, r, provider, cache): r for r in todo}
+            futures = {pool.submit(_assess_one, r, provider, cache, limiter): r for r in todo}
             for future in as_completed(futures):
                 r = futures[future]
                 try:

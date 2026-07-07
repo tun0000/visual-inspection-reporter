@@ -1,11 +1,12 @@
-"""report.md 渲染：執行資訊、總覽統計、逐圖明細（附圖）、成本與用量附錄。"""
+"""報告渲染：report.md（人讀）與 report.json（機器可讀）。"""
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from pathlib import Path
 
-from inspector.config import CLASS_NAMES_ZH, MODEL_PRICING, USD_TO_TWD
+from inspector.config import CLASS_NAMES_ZH, USD_TO_TWD
 from inspector.cost import CostMeter
 from inspector.pipeline import BatchResult, ImageResult
 from inspector.schema import SEVERITY_ZH, VERDICT_ZH
@@ -148,6 +149,8 @@ def render_report(batch: BatchResult, output_dir: Path) -> Path:
         "",
         "- 偵測模型並非完美：上游測試集實測 `short` 類 AP50 僅 0.565、"
         "`spurious_copper` 0.793，可能漏檢；VLM 僅評估「已被偵測到」的項目。",
+        "- flash-lite 級 VLM 對細微低對比瑕疵（如殘銅細線）可能誤判為誤檢；"
+        "重要批次可用 `--model gemini-3.5-flash` 升級複核（成本約 15 倍，見 README）。",
         "- 疑似誤檢項由 VLM 於說明中標註，最終處置仍建議人工確認。",
         "",
     ]
@@ -155,3 +158,73 @@ def render_report(batch: BatchResult, output_dir: Path) -> Path:
     report_path = output_dir / "report.md"
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
+
+
+def render_json(batch: BatchResult, output_dir: Path) -> Path:
+    """機器可讀版報告：output_dir/report.json。"""
+    images = []
+    for r in batch.results:
+        assessed_by_id = (
+            {fa.finding_id: fa for fa in r.assessed.assessment.findings} if r.assessed else {}
+        )
+        findings = []
+        for f in r.findings.findings:
+            fa = assessed_by_id.get(f.finding_id)
+            findings.append(
+                {
+                    "id": f.finding_id,
+                    "class": f.detection.class_name,
+                    "class_zh": CLASS_NAMES_ZH[f.detection.class_name],
+                    "confidence": round(f.detection.conf, 3),
+                    "bbox_xyxy": [round(v, 1) for v in f.detection.xyxy],
+                    "assessed": fa is not None,
+                    "severity": fa.severity.value if fa else None,
+                    "description_zh": fa.description_zh if fa else None,
+                    "action_zh": fa.action_zh if fa else None,
+                }
+            )
+        images.append(
+            {
+                "image": r.findings.image_path.name,
+                "verdict_zh": _image_verdict(r),
+                "verdict": r.assessed.assessment.verdict.value if r.assessed else None,
+                "summary_zh": r.assessed.assessment.summary_zh if r.assessed else None,
+                "warnings": r.assessed.warnings if r.assessed else [],
+                "cache_hit": r.cache_hit,
+                "error": r.error,
+                "annotated_image": r.annotated_path.relative_to(output_dir).as_posix(),
+                "findings": findings,
+            }
+        )
+
+    payload = {
+        "meta": {
+            "generated": batch.started.isoformat(timespec="seconds"),
+            "provider": batch.provider_name,
+            "model": batch.model_id,
+            "conf_threshold": batch.conf,
+            "elapsed_s": round(batch.elapsed_s, 1),
+            "image_count": len(batch.results),
+            "detect_only": batch.detect_only,
+        },
+        "cost": {
+            "models": [
+                {
+                    "model": mc.model_id,
+                    "calls": mc.calls,
+                    "input_tokens": mc.input_tokens,
+                    "output_tokens": mc.output_tokens,
+                    "usd": round(mc.usd, 6) if mc.usd is not None else None,
+                }
+                for mc in batch.meter.by_model.values()
+            ],
+            "cache_hits": batch.meter.cache_hits,
+            "total_usd": round(batch.meter.total_usd, 6),
+            "total_twd": round(batch.meter.total_twd, 2),
+            "usd_to_twd": USD_TO_TWD,
+        },
+        "images": images,
+    }
+    json_path = output_dir / "report.json"
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return json_path

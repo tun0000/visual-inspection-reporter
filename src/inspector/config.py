@@ -77,17 +77,19 @@ DEFAULT_CONF = 0.25
 # ---------------------------------------------------------------------------
 
 ANNOTATED_MAX_SIDE = 1280  # 給 VLM 的編號標註整圖最長邊（px）
-CROP_EXPAND = 1.6  # 裁切框相對偵測 bbox 的外擴倍數（帶 context）
-CROP_MIN_SIDE = 64  # 裁切最短邊下限（px）
+CROP_EXPAND = 2.0  # 裁切框相對偵測 bbox 的外擴倍數（帶 context）
+CROP_MIN_SIDE = 160  # 裁切最短邊下限（px）
+CROP_UPSCALE_BELOW = 320  # 裁切最長邊低於此值時放大 2 倍再送 VLM（細節不足會誤判）
 MAX_CROPS_PER_IMAGE = 8  # 依信心排序最多送前 N 張裁切給 VLM
 
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
-DEFAULT_WORKERS = 2  # M4 加入 RPM 限速器後再調高
+DEFAULT_WORKERS = 4  # VLM 併發數（有 RPM 限速器把總速率鎖住，併發只影響吞吐平滑度）
+MAX_RPM = 8  # 客戶端 RPM 限速：免費層 flash-lite 約 10 RPM，預設 8 留餘裕；0 = 停用
 VLM_ON_CLEAN = False  # 無瑕疵影像不呼叫 VLM，report 直接標「合格（未檢出瑕疵）」
 
-PROMPT_VERSION = "v1"  # 進快取鍵；改 prompt 內容必須 bump
+PROMPT_VERSION = "v2"  # 進快取鍵；改 prompt 內容必須 bump
 SCHEMA_VERSION = "v1"  # 進快取鍵；改回傳 schema 必須 bump
 CACHE_DIR = REPO_ROOT / ".cache" / "vlm"
