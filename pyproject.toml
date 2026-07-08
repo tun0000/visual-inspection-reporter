@@ -18,6 +18,7 @@ dependencies = [
     "gradio>=5.0",
     "anthropic>=0.116.0",
     "markdown>=3.10.2",
+    "huggingface-hub>=0.24",  # README 的權重下載指令依賴 `hf` CLI；本來是 gradio 的間接依賴，明確列出避免未來版本升級悄悄斷掉
 ]
 
 [dependency-groups]

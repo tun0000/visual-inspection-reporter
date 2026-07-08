@@ -86,7 +86,7 @@ uv run python inspect_cli.py --input-dir my_drone_photos --output output_uav/ --
 換領域只需要在 `src/inspector/domains.py` 加一個 `DomainProfile`（權重路徑、類別表、prompt、報告詞彙、已知侷限），不用碰 `detector.py`/`pipeline.py`/`report.py`。VisDrone 資料集僅限學術用途，本 repo 不隨附任何無人機影像，需自備測試圖。UAV 權重同樣不隨 repo 發佈，需另外下載到 `weights/`：
 
 ```bash
-huggingface-cli download betty0/uav-traffic-vision yolo26s_visdrone_640.onnx --local-dir weights
+hf download betty0/uav-traffic-vision yolo26s_visdrone_640.onnx --local-dir weights
 ```
 
 ## 更多輸出格式
@@ -106,7 +106,7 @@ git clone <this-repo> && cd visual-inspection-reporter
 uv sync
 
 # 權重（不隨 repo 發佈）：從 Hugging Face 下載 best.onnx 放進 weights/
-huggingface-cli download betty0/pcb-defect-detection best.onnx --local-dir weights
+hf download betty0/pcb-defect-detection best.onnx --local-dir weights
 
 # CLI：批次巡檢
 uv run python inspect_cli.py --input-dir sample_images --output output/
