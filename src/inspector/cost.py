@@ -12,6 +12,13 @@ from inspector.config import MODEL_PRICING, USD_TO_TWD
 from inspector.providers.base import Usage
 
 
+def format_usd(usd: float) -> str:
+    """$0.xxxx，或小到 4 位小數會四捨五入成 0 時顯示 <$0.0001（而非誤導的 $0.0000）。"""
+    if usd < 0.00005:
+        return "<$0.0001"
+    return f"${usd:.4f}"
+
+
 @dataclass
 class ModelCost:
     model_id: str

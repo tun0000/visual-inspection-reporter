@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 
 from inspector.config import CLASS_NAMES_ZH, USD_TO_TWD
-from inspector.cost import CostMeter
+from inspector.cost import CostMeter, format_usd
 from inspector.pipeline import BatchResult, ImageResult
 from inspector.schema import SEVERITY_ZH, VERDICT_ZH
 
@@ -104,15 +104,14 @@ def _cost_appendix(meter: CostMeter, elapsed_s: float) -> list[str]:
             "|---|---|---|---|---|",
         ]
         for mc in meter.by_model.values():
-            usd = f"${mc.usd:.4f}" if mc.usd is not None else "未知定價"
+            usd = format_usd(mc.usd) if mc.usd is not None else "未知定價"
             lines.append(
                 f"| {mc.model_id} | {mc.calls} | {mc.input_tokens:,} | {mc.output_tokens:,} | {usd} |"
             )
         lines.append("")
     lines += [
         f"- 快取命中：{meter.cache_hits} 張（不重打 API、計 0 成本）",
-        f"- 本次估算成本：**${meter.total_usd:.4f} USD ≈ NT${meter.total_twd:.2f}**"
-        f"（匯率 {USD_TO_TWD}，2026-07-07 查證）",
+        f"- 本次估算成本：**{format_usd(meter.total_usd)} USD**",
         f"- 執行耗時：{elapsed_s:.1f} 秒",
         "",
         "> 成本以各模型「付費層」官方定價換算（單價見 `src/inspector/config.py`，"

@@ -3,7 +3,7 @@
 import pytest
 
 from inspector.config import MODEL_PRICING, USD_TO_TWD
-from inspector.cost import CostMeter
+from inspector.cost import CostMeter, format_usd
 from inspector.providers.base import Usage
 
 
@@ -38,3 +38,13 @@ def test_cache_hits_counted():
     meter.add_cache_hit()
     meter.add_cache_hit()
     assert meter.cache_hits == 2 and meter.total_usd == 0.0
+
+
+def test_format_usd_normal():
+    assert format_usd(0.0136) == "$0.0136"
+    assert format_usd(1.5) == "$1.5000"
+
+
+def test_format_usd_tiny_amount_not_shown_as_zero():
+    assert format_usd(0.0000017) == "<$0.0001"
+    assert format_usd(0.0) == "<$0.0001"

@@ -47,6 +47,7 @@ def main() -> None:
     load_dotenv(REPO_ROOT / ".env")
     args = parse_args()
 
+    from inspector.cost import format_usd
     from inspector.pipeline import run_batch
     from inspector.report import _image_verdict, render_json, render_report
 
@@ -79,7 +80,7 @@ def main() -> None:
     for r in batch.results:
         print(f"  {r.findings.image_path.name}: {_image_verdict(r)}")
     print(
-        f"\n成本估算：${meter.total_usd:.4f} USD ≈ NT${meter.total_twd:.2f}"
+        f"\n成本估算：{format_usd(meter.total_usd)} USD"
         f"（付費層定價換算；免費層實際帳單 $0）"
     )
     print(f"報告：{report_path}（JSON：{json_path}）")
