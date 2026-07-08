@@ -1,13 +1,31 @@
 # visual-inspection-reporter — v1 實作計畫
 
-> 狀態（2026-07-08）：**M0–M6 全部完成**。M3 檢查點後使用者授權全權處理，
-> 品質迭代（裁切放大 + prompt v2）與 M4–M6 一次做完。
+> 狀態（2026-07-09）：**M0–M10 全部完成**（M7–M10 是 M0–M6 交付後使用者追加的
+> 4 項延後功能：Claude provider、Gemini Batch API、report.html、--domain uav）。
+> M3 檢查點後使用者授權全權處理，品質迭代（裁切放大 + prompt v2）與 M4–M6 一次做完。
 > 實作中的決策補記：
 > - `gemini-3.1-flash-lite` 對細微殘銅會誤判誤檢（放大裁切也一樣）；
 >   `gemini-3.5-flash` 對照實測全對但貴 ~15 倍 → 預設維持 lite，README 記錄取捨。
 > - OpenAI adapter 用 Responses API（`responses.parse` + `text_format`），
 >   `gpt-5.4-nano` 單張實測通過。
 > - Gradio 為 v6（theme/css 移到 launch()），app 已驗證 HTTP 200。
+> - **M7 Claude**：`messages.parse(output_format=...)` + `.parsed_output`，實測請求格式
+>   正確（拿到結構化 API 錯誤而非用戶端格式錯誤），但測試帳戶信用不足未能拿到成功回應。
+> - **M8 Gemini Batch API**：`InlinedRequest`/`InlinedResponse` 用 `metadata` 對應，不
+>   依賴回傳順序（實測確認兩者都有 metadata 欄位，這是唯一可靠的關聯機制）。程式碼
+>   結構已對照實際安裝的 SDK 內部型別逐一驗證，但兩次真實提交都撞到同一個免費帳戶
+>   當時已耗盡的配額（`batches.create` 本身也吃同一份配額），未能跑出成功案例。
+> - **M9 report.html**：靠 `markdown` 套件轉換既有 report.md，套用 DESIGN.md 同一份
+>   OKLCH 深色 token，避免報告內容邏輯重複一份。
+> - **M10 --domain uav**：`detector.py`/`findings.py`/`pipeline.py`/`report.py` 全部
+>   改吃 `DomainProfile`（權重/類別表/prompt/報告詞彙），不再寫死 PCB 專屬常數；
+>   `findings.py` 的標註顏色改成依 `class_id` 位置取色，不用逐類別維護色表。實測換上
+>   uav-traffic-vision 的 YOLO26s VisDrone 10 類權重（ONNX 輸出同樣是 (1,300,6)，
+>   letterbox/postprocess 完全不用改），182 個物件的密集路口圖一次 API 呼叫評估完畢，
+>   VLM 正確依照新 prompt 給出「巡邏風險」語意而非「瑕疵嚴重度」語意。
+> - **retry.py 修正**：UAV 測試時實測撞到 429，發現 google-genai 的建議重試秒數
+>   （`google.rpc.RetryInfo.retryDelay`）放在 JSON body 而非 HTTP 標頭，原本的
+>   `_retry_after_seconds` 只看標頭會漏掉——已補上解析，兩種來源都吃。
 > 本檔為工作計畫，隨討論持續修訂。
 
 ## Context

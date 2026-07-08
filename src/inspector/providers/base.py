@@ -20,8 +20,9 @@ class Usage:
 
 @dataclass
 class VLMRequest:
-    """一張影像的評估請求：編號標註整圖 + 局部裁切 + 偵測 JSON。"""
+    """一張影像的評估請求：system prompt（依 domain 而定）+ 編號標註整圖 + 局部裁切 + 偵測 JSON。"""
 
+    prompt: str
     annotated_jpeg: bytes
     crops: list[tuple[int, bytes]] = field(default_factory=list)  # (finding_id, jpeg bytes)
     findings_json: list[dict] = field(default_factory=list)
@@ -49,4 +50,8 @@ def create_provider(name: str, model_id: str | None = None) -> VLMProvider:
         from inspector.providers.openai_provider import OpenAIProvider
 
         return OpenAIProvider(model_id or DEFAULT_MODELS["openai"])
+    if name == "claude":
+        from inspector.providers.claude import ClaudeProvider
+
+        return ClaudeProvider(model_id or DEFAULT_MODELS["claude"])
     raise ValueError(f"未知的供應商：{name}（可用：{sorted(DEFAULT_MODELS)}）")

@@ -35,6 +35,25 @@ wheels = [
 ]
 
 [[package]]
+name = "anthropic"
+version = "0.116.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "docstring-parser" },
+    { name = "httpx" },
+    { name = "jiter" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/a2/d31f14e28d49bae983a3634e38dfb4b31c50110b5e403596c5c6a20b23f8/anthropic-0.116.0.tar.gz", hash = "sha256:5fc248fbb9fe03ef686f8a774f81586bca31a043260aab88b387ea3660f4a396", size = 949149, upload-time = "2026-07-02T19:08:10.534Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/dd/2a1e81cf1b163acc340afc4ec74ed1d86f5eed1a809fabdeed3e0997b346/anthropic-0.116.0-py3-none-any.whl", hash = "sha256:6c0a7698e8d652455da3499978279bb2588c7264d0a35be3666009a4258c8256", size = 956896, upload-time = "2026-07-02T19:08:08.756Z" },
+]
+
+[[package]]
 name = "anyio"
 version = "4.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -419,6 +438,15 @@ wheels = [
 ]
 
 [[package]]
+name = "docstring-parser"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/4d/f332313098c1de1b2d2ff91cf2674415cc7cddab2ca1b01ae29774bd5fdf/docstring_parser-0.18.0.tar.gz", hash = "sha256:292510982205c12b1248696f44959db3cdd1740237a968ea1e2e7a900eeb2015", size = 29341, upload-time = "2026-04-14T04:09:19.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/5f/ed01f9a3cdffbd5a008556fc7b2a08ddb1cc6ace7effa7340604b1d16699/docstring_parser-0.18.0-py3-none-any.whl", hash = "sha256:b3fcbed555c47d8479be0796ef7e19c2670d428d72e96da63f3a40122860374b", size = 22484, upload-time = "2026-04-14T04:09:18.638Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.139.0"
 source = { registry = "https://pypi.org/simple" }
@@ -780,6 +808,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/07/421f1d5b65493a76e16027b848aba6a7d28073ae75944fa4289cc914d39f/jiter-0.16.0-graalpy312-graalpy250_312_native-macosx_11_0_arm64.whl", hash = "sha256:96e38eea538c8ddf853a35727c7be0741c76c13f04148ac5c116222f50ece3b3", size = 304658, upload-time = "2026-06-29T13:05:08.708Z" },
     { url = "https://files.pythonhosted.org/packages/0a/db/bba1155f01a01c3c37a89425d571da751bbedf5c54247b831a04cb971798/jiter-0.16.0-graalpy312-graalpy250_312_native-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d284fb8d94d5855d60c44fefcab4bf966f1da6fada73992b01f6f0c9bc0c6702", size = 339719, upload-time = "2026-06-29T13:05:10.41Z" },
     { url = "https://files.pythonhosted.org/packages/78/f7/18a1afcd64f35314b68c1f23afcd9994d0bc13e65cc77517afff4e83986d/jiter-0.16.0-graalpy312-graalpy250_312_native-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:64d613743df53199b1aa256a7d328340da6d7078aac7705a7db9d7a791e9cfd2", size = 343885, upload-time = "2026-06-29T13:05:12.087Z" },
+]
+
+[[package]]
+name = "markdown"
+version = "3.10.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/f4/69fa6ed85ae003c2378ffa8f6d2e3234662abd02c10d216c0ba96081a238/markdown-3.10.2.tar.gz", hash = "sha256:994d51325d25ad8aa7ce4ebaec003febcce822c3f8c911e3b17c52f7f589f950", size = 368805, upload-time = "2026-02-09T14:57:26.942Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/1f/77fa3081e4f66ca3576c896ae5d31c3002ac6607f9747d2e3aa49227e464/markdown-3.10.2-py3-none-any.whl", hash = "sha256:e91464b71ae3ee7afd3017d9f358ef0baf158fd9a298db92f1d4761133824c36", size = 108180, upload-time = "2026-02-09T14:57:25.787Z" },
 ]
 
 [[package]]
@@ -1838,8 +1875,10 @@ name = "visual-inspection-reporter"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anthropic" },
     { name = "google-genai" },
     { name = "gradio" },
+    { name = "markdown" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "onnxruntime" },
@@ -1859,8 +1898,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anthropic", specifier = ">=0.116.0" },
     { name = "google-genai", specifier = ">=1.0" },
     { name = "gradio", specifier = ">=5.0" },
+    { name = "markdown", specifier = ">=3.10.2" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "onnxruntime", specifier = ">=1.20" },
     { name = "openai", specifier = ">=1.60" },

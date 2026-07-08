@@ -6,7 +6,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from inspector.config import CLASS_NAMES_ZH, USD_TO_TWD
+from inspector.config import USD_TO_TWD
 from inspector.cost import CostMeter, format_usd
 from inspector.pipeline import BatchResult, ImageResult
 from inspector.schema import SEVERITY_ZH, VERDICT_ZH
@@ -29,9 +29,10 @@ def _image_verdict(r: ImageResult) -> str:
 
 def _overview(batch: BatchResult) -> list[str]:
     lines = ["## 總覽", ""]
+    class_names_zh = batch.domain.class_names_zh
 
     verdict_counts = Counter(_image_verdict(r) for r in batch.results)
-    lines += ["| 單板判定 | 張數 |", "|---|---|"]
+    lines += ["| 判定 | 張數 |", "|---|---|"]
     lines += [f"| {v} | {n} |" for v, n in verdict_counts.most_common()]
     lines.append("")
 
@@ -39,9 +40,9 @@ def _overview(batch: BatchResult) -> list[str]:
         f.detection.class_name for r in batch.results for f in r.findings.findings
     )
     if class_counts:
-        lines += ["| 瑕疵類別 | 偵測數 |", "|---|---|"]
+        lines += ["| 偵測類別 | 偵測數 |", "|---|---|"]
         lines += [
-            f"| {CLASS_NAMES_ZH[c]}（{c}） | {n} |" for c, n in class_counts.most_common()
+            f"| {class_names_zh[c]}（{c}） | {n} |" for c, n in class_counts.most_common()
         ]
         lines.append("")
 
@@ -58,7 +59,7 @@ def _overview(batch: BatchResult) -> list[str]:
     return lines
 
 
-def _detail(index: int, r: ImageResult, output_dir: Path) -> list[str]:
+def _detail(index: int, r: ImageResult, output_dir: Path, class_names_zh: dict[str, str]) -> list[str]:
     name = r.findings.image_path.name
     lines = [f"### {index}. {name} — 判定：{_image_verdict(r)}", ""]
     lines += [f"![{name}]({r.annotated_path.relative_to(output_dir).as_posix()})", ""]
@@ -79,14 +80,14 @@ def _detail(index: int, r: ImageResult, output_dir: Path) -> list[str]:
         for fa in sorted(r.assessed.assessment.findings, key=lambda x: x.finding_id):
             det = conf_by_id[fa.finding_id]
             lines.append(
-                f"| #{fa.finding_id} | {CLASS_NAMES_ZH[det.class_name]}（{det.class_name}） "
+                f"| #{fa.finding_id} | {class_names_zh[det.class_name]}（{det.class_name}） "
                 f"| {det.conf:.2f} | {SEVERITY_ZH[fa.severity]} "
                 f"| {_cell(fa.description_zh)} | {_cell(fa.action_zh)} |"
             )
         for fid in r.assessed.missing_ids:
             det = conf_by_id[fid]
             lines.append(
-                f"| #{fid} | {CLASS_NAMES_ZH[det.class_name]}（{det.class_name}） "
+                f"| #{fid} | {class_names_zh[det.class_name]}（{det.class_name}） "
                 f"| {det.conf:.2f} | — | VLM 未評估此項 | 建議人工複檢 |"
             )
         lines.append("")
@@ -122,14 +123,15 @@ def _cost_appendix(meter: CostMeter, elapsed_s: float) -> list[str]:
     return lines
 
 
-def render_report(batch: BatchResult, output_dir: Path) -> Path:
-    """把整批結果渲染成 output_dir/report.md，回傳報告路徑。"""
+def _report_lines(batch: BatchResult, output_dir: Path) -> list[str]:
+    domain = batch.domain
     lines = [
-        "# PCB 巡檢報告",
+        f"# {domain.report_title_zh}",
         "",
         f"- 影像數：{len(batch.results)}",
-        f"- 偵測模型：YOLO26n ONNX（conf ≥ {batch.conf}）",
+        f"- 偵測模型：{domain.model_desc_zh}（conf ≥ {batch.conf}）",
         f"- VLM：{batch.provider_name} / {batch.model_id}"
+        + (" · Gemini Batch API（5 折，非即時）" if batch.used_batch_api else "")
         + ("（--detect-only，未呼叫）" if batch.detect_only else ""),
         "",
     ]
@@ -137,29 +139,89 @@ def render_report(batch: BatchResult, output_dir: Path) -> Path:
 
     lines += ["## 逐圖明細", ""]
     for i, r in enumerate(batch.results, 1):
-        lines += _detail(i, r, output_dir)
+        lines += _detail(i, r, output_dir, domain.class_names_zh)
 
     if not batch.detect_only:
         lines += _cost_appendix(batch.meter, batch.elapsed_s)
 
-    lines += [
-        "## 注意事項",
-        "",
-        "- 偵測模型並非完美：上游測試集實測 `short` 類 AP50 僅 0.565、"
-        "`spurious_copper` 0.793，可能漏檢；VLM 僅評估「已被偵測到」的項目。",
-        "- flash-lite 級 VLM 對細微低對比瑕疵（如殘銅細線）可能誤判為誤檢；"
-        "重要批次可用 `--model gemini-3.5-flash` 升級複核（成本約 15 倍，見 README）。",
-        "- 疑似誤檢項由 VLM 於說明中標註，最終處置仍建議人工確認。",
-        "",
-    ]
+    if domain.caveats_zh:
+        lines += ["## 注意事項", ""]
+        lines += [f"- {c}" for c in domain.caveats_zh]
+        lines.append("")
+    return lines
 
+
+def render_report(batch: BatchResult, output_dir: Path) -> Path:
+    """把整批結果渲染成 output_dir/report.md，回傳報告路徑。"""
     report_path = output_dir / "report.md"
-    report_path.write_text("\n".join(lines), encoding="utf-8")
+    report_path.write_text("\n".join(_report_lines(batch, output_dir)), encoding="utf-8")
     return report_path
+
+
+def render_html(batch: BatchResult, output_dir: Path) -> Path:
+    """把 report.md 轉成有樣式的 report.html（沿用 DESIGN.md 的深色主題 token）。"""
+    import markdown
+
+    md_text = "\n".join(_report_lines(batch, output_dir))
+    body = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
+    html = _HTML_TEMPLATE.format(title=batch.domain.report_title_zh, body=body)
+    html_path = output_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
+_HTML_TEMPLATE = """\
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<style>
+:root {{
+  --bg: oklch(0.16 0.014 268);
+  --surface: oklch(0.23 0.018 268);
+  --surface2: oklch(0.28 0.02 268);
+  --border: oklch(0.32 0.02 268);
+  --ink: oklch(0.94 0.006 268);
+  --muted: oklch(0.64 0.012 268);
+  --accent: oklch(0.80 0.10 195);
+}}
+body {{
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 4rem;
+  line-height: 1.6;
+}}
+h1, h2, h3 {{ letter-spacing: -0.01em; }}
+h1 {{ border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }}
+a {{ color: var(--accent); }}
+blockquote {{
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  margin-left: 0;
+  padding-left: 1em;
+}}
+table {{ width: 100%; border-collapse: collapse; font-size: 0.92em; margin: 1em 0; }}
+th, td {{ border: 1px solid var(--border); padding: 0.5em 0.75em; text-align: left; }}
+thead th {{ background: var(--surface2); }}
+tbody tr:nth-child(even) {{ background: var(--surface2); }}
+img {{ max-width: 100%; border-radius: 6px; border: 1px solid var(--border); }}
+code {{ background: var(--surface2); padding: 0.1em 0.4em; border-radius: 4px; }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>
+"""
 
 
 def render_json(batch: BatchResult, output_dir: Path) -> Path:
     """機器可讀版報告：output_dir/report.json。"""
+    class_names_zh = batch.domain.class_names_zh
     images = []
     for r in batch.results:
         assessed_by_id = (
@@ -172,7 +234,7 @@ def render_json(batch: BatchResult, output_dir: Path) -> Path:
                 {
                     "id": f.finding_id,
                     "class": f.detection.class_name,
-                    "class_zh": CLASS_NAMES_ZH[f.detection.class_name],
+                    "class_zh": class_names_zh[f.detection.class_name],
                     "confidence": round(f.detection.conf, 3),
                     "bbox_xyxy": [round(v, 1) for v in f.detection.xyxy],
                     "assessed": fa is not None,
@@ -198,12 +260,14 @@ def render_json(batch: BatchResult, output_dir: Path) -> Path:
     payload = {
         "meta": {
             "generated": batch.started.isoformat(timespec="seconds"),
+            "domain": batch.domain.name,
             "provider": batch.provider_name,
             "model": batch.model_id,
             "conf_threshold": batch.conf,
             "elapsed_s": round(batch.elapsed_s, 1),
             "image_count": len(batch.results),
             "detect_only": batch.detect_only,
+            "used_batch_api": batch.used_batch_api,
         },
         "cost": {
             "models": [

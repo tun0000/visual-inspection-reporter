@@ -33,6 +33,34 @@ def test_retry_after_header_parsing():
     assert _retry_after_seconds(exc_bad) == 0.0
 
 
+def test_retry_after_google_rpc_retry_info():
+    """實測 2026-07-09：google-genai 的 429 把建議秒數放在 JSON body（沒有 HTTP 標頭），
+    google.genai.errors.APIError 把它存在 exc.details['error']['details'] 裡。"""
+
+    class FakeGoogleError(Exception):
+        code = 429
+        details = {
+            "error": {
+                "code": 429,
+                "status": "RESOURCE_EXHAUSTED",
+                "details": [
+                    {"@type": "type.googleapis.com/google.rpc.Help", "links": []},
+                    {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "52s"},
+                ],
+            }
+        }
+
+    assert _retry_after_seconds(FakeGoogleError()) == 52.0
+
+
+def test_retry_after_missing_retry_info_is_zero():
+    class FakeGoogleError(Exception):
+        code = 429
+        details = {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "details": []}}
+
+    assert _retry_after_seconds(FakeGoogleError()) == 0.0
+
+
 def test_rate_limiter_disabled_and_under_limit():
     RateLimiter(0).acquire()  # 停用：立即返回
     limiter = RateLimiter(10)

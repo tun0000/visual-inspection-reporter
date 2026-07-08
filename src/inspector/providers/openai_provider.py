@@ -12,7 +12,6 @@ import json
 
 from openai import OpenAI
 
-from inspector.prompt import INSPECTION_PROMPT
 from inspector.providers.base import Usage, VLMProvider, VLMRequest, VLMResponseError
 from inspector.schema import ImageAssessment
 
@@ -31,7 +30,7 @@ class OpenAIProvider(VLMProvider):
 
     def assess_image(self, request: VLMRequest) -> tuple[ImageAssessment, Usage]:
         content: list[dict] = [
-            {"type": "input_text", "text": INSPECTION_PROMPT},
+            {"type": "input_text", "text": request.prompt},
             {"type": "input_text", "text": "【編號標註整圖】"},
             _image_block(request.annotated_jpeg),
         ]

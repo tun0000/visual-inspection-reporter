@@ -9,6 +9,7 @@ from PIL import Image
 
 from inspector.cache import VLMCache
 from inspector.cost import CostMeter
+from inspector.domains import PCB_PROFILE
 from inspector.findings import build_findings
 from inspector.pipeline import BatchResult, ImageResult, _assess_one
 from inspector.providers.base import Usage, VLMProvider, VLMRequest
@@ -79,6 +80,7 @@ def _make_batch(tmp_path, image_findings) -> tuple[BatchResult, object]:
         provider_name="gemini",
         model_id="gemini-3.1-flash-lite",
         conf=0.25,
+        domain=PCB_PROFILE,
         started=datetime.now().astimezone(),
         elapsed_s=12.3,
     )
@@ -125,10 +127,10 @@ def test_assess_one_uses_cache_on_second_call(tmp_path, image_findings):
     cache = VLMCache(cache_dir=tmp_path / "cache", enabled=True)
     limiter = RateLimiter(0)
 
-    rec, usage, hit = _assess_one(result, provider, cache, limiter)
+    rec, usage, hit = _assess_one(result, PCB_PROFILE, provider, cache, limiter)
     assert not hit and provider.calls == 1
     assert rec.missing_ids == [] and rec.dropped_ids == []
 
-    rec2, usage2, hit2 = _assess_one(result, provider, cache, limiter)
+    rec2, usage2, hit2 = _assess_one(result, PCB_PROFILE, provider, cache, limiter)
     assert hit2 and provider.calls == 1  # 第二次走快取，不再打 API
     assert usage2 == usage

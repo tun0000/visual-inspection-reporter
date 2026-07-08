@@ -13,9 +13,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # ---------------------------------------------------------------------------
 # VLM 模型註冊表與定價
 #
-# 單價為官方「付費層」定價（USD / 1M tokens），查證日期 2026-07-08：
-#   - https://ai.google.dev/gemini-api/docs/pricing
-#   - https://developers.openai.com/api/docs/pricing
+# 單價為官方「付費層」定價（USD / 1M tokens）：
+#   - https://ai.google.dev/gemini-api/docs/pricing（查證 2026-07-08）
+#   - https://developers.openai.com/api/docs/pricing（查證 2026-07-08）
+#   - https://platform.claude.com/docs/en/about-claude/pricing（查證 2026-07-09）
 # 本專案開發期走 Gemini 免費層（實際帳單 $0），報告中的成本一律標示為
 # 「以付費層定價換算的估算值」。
 # ---------------------------------------------------------------------------
@@ -35,12 +36,23 @@ MODEL_PRICING: dict[str, ModelPricing] = {
     # OpenAI（GA）
     "gpt-5.4-nano": ModelPricing(0.20, 1.25),  # openai provider 預設
     "gpt-5.4-mini": ModelPricing(0.75, 4.50),  # openai 品質備選
+    # Anthropic Claude（GA）
+    "claude-haiku-4-5": ModelPricing(1.00, 5.00),  # claude provider 預設
+    "claude-sonnet-4-6": ModelPricing(3.00, 15.00),  # claude 品質備選
+}
+
+# Gemini Batch API：input/output 皆 5 折（--batch-api，僅 gemini 支援）。
+MODEL_PRICING_BATCH: dict[str, ModelPricing] = {
+    "gemini-3.1-flash-lite": ModelPricing(0.125, 0.75),
+    "gemini-2.5-flash-lite": ModelPricing(0.05, 0.20),
+    "gemini-3.5-flash": ModelPricing(0.75, 4.50),
 }
 
 DEFAULT_PROVIDER = "gemini"
 DEFAULT_MODELS = {
     "gemini": "gemini-3.1-flash-lite",
     "openai": "gpt-5.4-nano",
+    "claude": "claude-haiku-4-5",
 }
 
 # USD → TWD 匯率常數，僅用於報告中的新台幣估算；手動維護。
@@ -48,28 +60,12 @@ DEFAULT_MODELS = {
 USD_TO_TWD = 32.1
 
 # ---------------------------------------------------------------------------
-# 偵測（YOLO26n ONNX，end-to-end 免 NMS）
+# 偵測（YOLO26 ONNX，end-to-end 免 NMS）
+#
+# 類別表/權重路徑/信心閾值依領域而異，見 domains.py 的 DomainProfile
+# （--domain pcb｜uav）。這裡只留跨領域共用的預設值。
 # ---------------------------------------------------------------------------
 
-CLASS_NAMES = [
-    "missing_hole",
-    "mouse_bite",
-    "open_circuit",
-    "short",
-    "spur",
-    "spurious_copper",
-]
-
-CLASS_NAMES_ZH = {
-    "missing_hole": "缺孔",
-    "mouse_bite": "鼠咬",
-    "open_circuit": "斷路",
-    "short": "短路",
-    "spur": "毛刺",
-    "spurious_copper": "殘銅",
-}
-
-DEFAULT_WEIGHTS = REPO_ROOT / "weights" / "best.onnx"
 DEFAULT_CONF = 0.25
 
 # ---------------------------------------------------------------------------

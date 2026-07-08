@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from inspector.config import CLASS_NAMES, DEFAULT_CONF
+from inspector.config import DEFAULT_CONF
 
 IMG_SIZE = 640
 PAD_VALUE = 114
@@ -72,11 +72,15 @@ def postprocess(
     output: np.ndarray,
     info: LetterboxInfo,
     orig_size: tuple[int, int],
+    class_names: list[str],
     conf: float = DEFAULT_CONF,
 ) -> list[Detection]:
     """(1, 300, 6) letterbox 空間 rows -> 原圖像素座標的 Detection list。
 
     信心過濾同時丟掉 e2e head 的零信心填充列（max_det=300 固定輸出）。
+    class_names 由呼叫端傳入（見 domains.py 的 DomainProfile）：ONNX 輸出的
+    class_id 欄位跟類別數無關（YOLO26 end-to-end 匯出固定 6 欄），只有
+    id→名稱的對照表隨領域而變。
     """
     rows = output[0]
     rows = rows[rows[:, 4] >= conf]
@@ -91,7 +95,7 @@ def postprocess(
         oy2 = float(max(0.0, min((y2 - info.pad_top) / info.gain, orig_h)))
         class_id = int(cls)
         detections.append(
-            Detection(class_id, CLASS_NAMES[class_id], (ox1, oy1, ox2, oy2), float(score))
+            Detection(class_id, class_names[class_id], (ox1, oy1, ox2, oy2), float(score))
         )
     return detections
 
@@ -99,9 +103,10 @@ def postprocess(
 class Detector:
     """獨立的 ONNX Runtime session——不依賴 torch / ultralytics。"""
 
-    def __init__(self, onnx_path: str | Path, providers: list[str] | None = None):
+    def __init__(self, onnx_path: str | Path, class_names: list[str], providers: list[str] | None = None):
         import onnxruntime as ort
 
+        self.class_names = class_names
         self.session = ort.InferenceSession(
             str(onnx_path), providers=providers or ["CPUExecutionProvider"]
         )
@@ -110,4 +115,4 @@ class Detector:
     def predict(self, image: Image.Image, conf: float = DEFAULT_CONF) -> list[Detection]:
         batch, info = preprocess(image)
         (output,) = self.session.run(None, {self.input_name: batch})
-        return postprocess(output, info, image.size, conf)
+        return postprocess(output, info, image.size, self.class_names, conf)

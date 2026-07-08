@@ -12,7 +12,6 @@ import json
 from google import genai
 from google.genai import types
 
-from inspector.prompt import INSPECTION_PROMPT
 from inspector.providers.base import Usage, VLMProvider, VLMRequest, VLMResponseError
 from inspector.schema import ImageAssessment
 
@@ -26,7 +25,7 @@ class GeminiProvider(VLMProvider):
 
     def assess_image(self, request: VLMRequest) -> tuple[ImageAssessment, Usage]:
         parts: list[types.Part] = [
-            types.Part.from_text(text=INSPECTION_PROMPT),
+            types.Part.from_text(text=request.prompt),
             types.Part.from_text(text="【編號標註整圖】"),
             types.Part.from_bytes(data=request.annotated_jpeg, mime_type="image/jpeg"),
         ]

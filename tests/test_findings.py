@@ -1,6 +1,7 @@
 """findings 組裝：編號、裁切邊界、標註縮圖、偵測 JSON。"""
 
 from inspector.config import ANNOTATED_MAX_SIDE, CROP_MIN_SIDE
+from inspector.domains import PCB_PROFILE
 from inspector.findings import annotate, crop_finding, findings_to_json
 
 
@@ -48,7 +49,7 @@ def test_annotate_no_findings_is_noop_size(board_image):
 
 
 def test_findings_to_json_normalized(image_findings):
-    payload = findings_to_json(image_findings)
+    payload = findings_to_json(image_findings, PCB_PROFILE.class_names_zh)
     assert [item["id"] for item in payload] == [1, 2, 3]
     for item in payload:
         assert set(item) == {"id", "class", "class_zh", "confidence", "bbox_norm"}

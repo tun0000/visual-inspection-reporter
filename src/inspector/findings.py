@@ -15,22 +15,31 @@ from PIL import Image
 
 from inspector.config import (
     ANNOTATED_MAX_SIDE,
-    CLASS_NAMES_ZH,
     CROP_EXPAND,
     CROP_MIN_SIDE,
     CROP_UPSCALE_BELOW,
 )
 from inspector.detector import Detection
 
-# 每類固定一色（RGB），挑在深綠色 PCB 基板上對比明顯的顏色
-CLASS_COLORS = {
-    "missing_hole": (255, 64, 64),
-    "mouse_bite": (255, 160, 0),
-    "open_circuit": (255, 255, 80),
-    "short": (255, 0, 255),
-    "spur": (0, 224, 255),
-    "spurious_copper": (255, 255, 255),
-}
+# 依 class_id 位置取色（RGB），跟類別名稱脫鉤——這樣任何領域的類別表
+# （6 類 PCB 瑕疵、10 類 VisDrone 物件…）都能直接用，不用逐類別維護色表。
+# 前 6 色沿用原 PCB 專案挑選、在深綠色基板上對比明顯的顏色，其餘為常見高對比色。
+PALETTE: list[tuple[int, int, int]] = [
+    (255, 64, 64),
+    (255, 160, 0),
+    (255, 255, 80),
+    (255, 0, 255),
+    (0, 224, 255),
+    (255, 255, 255),
+    (80, 255, 80),
+    (255, 120, 180),
+    (140, 90, 255),
+    (0, 160, 255),
+]
+
+
+def _color_for(class_id: int) -> tuple[int, int, int]:
+    return PALETTE[class_id % len(PALETTE)]
 
 
 @dataclass(frozen=True)
@@ -67,7 +76,7 @@ def annotate(image: Image.Image, findings: list[Finding], max_side: int = ANNOTA
 
     for f in findings:
         x1, y1, x2, y2 = (round(v) for v in f.detection.xyxy)
-        color = CLASS_COLORS[f.detection.class_name]
+        color = _color_for(f.detection.class_id)
         cv2.rectangle(canvas, (x1, y1), (x2, y2), color, thickness)
 
         label = f"#{f.finding_id} {f.detection.class_name}"
@@ -110,14 +119,14 @@ def crop_finding(
     return crop
 
 
-def findings_to_json(fi: ImageFindings) -> list[dict]:
+def findings_to_json(fi: ImageFindings, class_names_zh: dict[str, str]) -> list[dict]:
     """給 VLM 的偵測 JSON：id、類別（英/中）、信心、歸一化 bbox。"""
     w, h = fi.image_size
     return [
         {
             "id": f.finding_id,
             "class": f.detection.class_name,
-            "class_zh": CLASS_NAMES_ZH[f.detection.class_name],
+            "class_zh": class_names_zh[f.detection.class_name],
             "confidence": round(f.detection.conf, 3),
             "bbox_norm": [
                 round(f.detection.xyxy[0] / w, 4),

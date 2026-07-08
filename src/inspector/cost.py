@@ -1,14 +1,15 @@
 """單次執行的 token 用量與成本統計。
 
-token 數一律取 API 回傳的實際 usage；金額以 config.MODEL_PRICING 的
-付費層官方定價換算（免費層實際帳單為 $0，報告標示為估算值）。
+token 數一律取 API 回傳的實際 usage；金額以 config.MODEL_PRICING（或
+Gemini Batch API 的 MODEL_PRICING_BATCH）官方定價換算（免費層實際帳單
+為 $0，報告標示為估算值）。
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from inspector.config import MODEL_PRICING, USD_TO_TWD
+from inspector.config import MODEL_PRICING, MODEL_PRICING_BATCH, USD_TO_TWD
 from inspector.providers.base import Usage
 
 
@@ -25,10 +26,12 @@ class ModelCost:
     calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    batch: bool = False  # True：這個模型的用量走 Gemini Batch API 折扣價
 
     @property
     def usd(self) -> float | None:
-        pricing = MODEL_PRICING.get(self.model_id)
+        table = MODEL_PRICING_BATCH if self.batch else MODEL_PRICING
+        pricing = table.get(self.model_id)
         if pricing is None:
             return None  # 未登錄定價的模型：報告標「未知定價」
         return (
@@ -42,8 +45,8 @@ class CostMeter:
     by_model: dict[str, ModelCost] = field(default_factory=dict)
     cache_hits: int = 0
 
-    def add(self, usage: Usage) -> None:
-        mc = self.by_model.setdefault(usage.model_id, ModelCost(usage.model_id))
+    def add(self, usage: Usage, *, batch: bool = False) -> None:
+        mc = self.by_model.setdefault(usage.model_id, ModelCost(usage.model_id, batch=batch))
         mc.calls += 1
         mc.input_tokens += usage.input_tokens
         mc.output_tokens += usage.output_tokens

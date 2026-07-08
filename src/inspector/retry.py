@@ -1,7 +1,8 @@
 """VLM 呼叫的韌性層：指數退避重試 + 跨執行緒 RPM 限速。
 
-重試only限暫時性錯誤（429/5xx/連線逾時）；等待時間取
-「Retry-After 標頭」與「指數退避+jitter」的較大值，最多 5 次。
+重試only限暫時性錯誤（429/5xx/連線逾時）；等待時間取「供應商建議的重試秒數」
+（HTTP Retry-After 標頭，或 google-genai 429 特有、放在 JSON body 裡的
+google.rpc.RetryInfo）與「指數退避+jitter」的較大值，最多 5 次。
 """
 
 from __future__ import annotations
@@ -38,8 +39,8 @@ def is_retryable(exc: BaseException) -> bool:
     return _status_of(exc) in RETRYABLE_STATUS
 
 
-def _retry_after_seconds(exc: BaseException | None) -> float:
-    """盡力解析 Retry-After 標頭（秒數或 HTTP 日期）；解析不到回 0。"""
+def _retry_after_from_header(exc: BaseException) -> float:
+    """HTTP Retry-After 標頭（openai/requests 這類走標準 HTTP 標頭的 SDK）。"""
     response = getattr(exc, "response", None)
     headers = getattr(response, "headers", None)
     if not headers:
@@ -54,6 +55,33 @@ def _retry_after_seconds(exc: BaseException | None) -> float:
             return max(0.0, (parsedate_to_datetime(raw).timestamp()) - time.time())
         except (TypeError, ValueError):
             return 0.0
+
+
+def _retry_after_from_google_details(exc: BaseException) -> float:
+    """google-genai 的 429 把建議等待秒數放在 JSON body 的
+    google.rpc.RetryInfo（exc.details['details']），不是 HTTP 標頭——
+    實測若不解析這裡，重試會在配額真正重置前就打完 5 次全部落空。
+    """
+    details = getattr(exc, "details", None)
+    if not isinstance(details, dict):
+        return 0.0
+    error = details.get("error", details)
+    for item in error.get("details", []) or []:
+        if not isinstance(item, dict) or "RetryInfo" not in str(item.get("@type", "")):
+            continue
+        raw = str(item.get("retryDelay", "")).rstrip("s")
+        try:
+            return float(raw)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def _retry_after_seconds(exc: BaseException | None) -> float:
+    """盡力解析各家 SDK 建議的重試等待秒數；解析不到回 0。"""
+    if exc is None:
+        return 0.0
+    return max(_retry_after_from_header(exc), _retry_after_from_google_details(exc))
 
 
 _exponential = wait_random_exponential(multiplier=1, max=32)
