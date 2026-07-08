@@ -23,19 +23,21 @@
 ## 架構
 
 ```mermaid
-flowchart LR
-    P["DomainProfile<br>--domain pcb｜uav<br>權重＋類別＋prompt"] -.-> B
-    P -.-> F
-    A[影像資料夾] --> B["YOLO26 偵測<br>ONNX Runtime（本地 CPU）"]
-    B --> C["findings 組裝<br>編號標註圖＋context 裁切＋偵測 JSON"]
+%%{init: {'themeVariables': {'fontSize': '18px'}, 'flowchart': {'nodeSpacing': 45, 'rankSpacing': 55}}}%%
+flowchart TD
+    P["DomainProfile<br/>--domain pcb｜uav"] -.-> B & F
+    A[影像資料夾] --> B["YOLO26 偵測<br/>ONNX Runtime"]
+    B --> C[findings 組裝]
     C --> D{有偵測到東西？}
     D -- 否 --> I
     D -- 是 --> E[內容雜湊快取]
     E -- 命中 --> G
-    E -- 未命中 --> F["VLM 結構化輸出<br>Gemini／OpenAI／Claude 可切換<br>同步併發 或 Gemini Batch API（5折）<br>退避重試＋RPM 限速"]
-    F --> G["解析防呆<br>finding_id 對齊、幻覺剔除"]
-    G --> I["report.md／json／html<br>總覽統計＋逐圖明細＋成本附錄"]
+    E -- 未命中 --> F[VLM 結構化輸出]
+    F --> G[解析防呆]
+    G --> I["報告輸出<br/>md／json／html"]
 ```
+
+細節都在下面的「工程細節」——圖只畫主流程，避免節點塞太多字被 GitHub 縮小到看不清楚。
 
 工程細節：
 
