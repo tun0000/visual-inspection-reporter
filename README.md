@@ -146,6 +146,7 @@ tests/                           # 28 項 pytest（MockProvider，零網路）
 - flash-lite 級 VLM 對細微低對比瑕疵有極限（見成本一節的殘銅案例）。
 - Gemini 免費層限速嚴格（本帳戶實測 flash-lite 級約 10 RPM、Batch API 也共用同一份免費額度），大批量或想穩定跑 Batch API 請調 `--max-rpm` 或升級付費層——本 repo 開發期間就因為在同一個免費帳戶上密集測試多個功能，實際撞過 429 配額耗盡（含 Batch API 提交本身），這也是韌性層要處理 Google 專屬 RetryInfo 的原因。
 - Claude provider 的程式碼路徑已用真實 API 打通驗證過請求格式正確（拿到結構化的 API 層級錯誤，不是用戶端格式錯誤），但受限於當時測試帳戶額度不足，未能取得成功回應的完整範例；程式碼與其餘兩家供應商共用同一套抽象層與測試模式。
+- Gemini Batch API 程式碼已對照真實安裝的 SDK 型別驗證過（`InlinedRequest`/`InlinedResponse`/`JobState` 等），並實測 4 支不同帳號/專案的 API key：3 支撞到同一份免費額度的 429、1 支回 400 `FAILED_PRECONDITION`——這個錯誤在 Gemini API 幾乎都對應同一件事：**該 GCP 專案沒有連結計費帳戶**，送出 batch job 這個動作本身要求專案綁過付款方式，即使實際用量仍落在免費層、不會被扣款。目前手上的 key 沒有一個滿足這個前提，需要使用者自行到 Google Cloud Console 為專案綁定計費方式才能實測成功案例。
 
 ## 資料集與授權
 

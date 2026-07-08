@@ -13,8 +13,13 @@
 >   正確（拿到結構化 API 錯誤而非用戶端格式錯誤），但測試帳戶信用不足未能拿到成功回應。
 > - **M8 Gemini Batch API**：`InlinedRequest`/`InlinedResponse` 用 `metadata` 對應，不
 >   依賴回傳順序（實測確認兩者都有 metadata 欄位，這是唯一可靠的關聯機制）。程式碼
->   結構已對照實際安裝的 SDK 內部型別逐一驗證，但兩次真實提交都撞到同一個免費帳戶
->   當時已耗盡的配額（`batches.create` 本身也吃同一份配額），未能跑出成功案例。
+>   結構已對照實際安裝的 SDK 內部型別逐一驗證。**根因已查明**：實測 4 支分屬不同
+>   帳號/GCP 專案的 key，3 支撞到同一份免費額度的 429、1 支回 400
+>   `FAILED_PRECONDITION`——這個錯誤代表「該 GCP 專案沒有連結計費帳戶」，batch job
+>   提交本身要求專案綁過付款方式（即使實際用量仍在免費層、不會被扣款）；目前手上
+>   沒有一個 key 滿足這個前提，需要使用者自行綁定計費方式才能跑出成功案例。
+>   （途中一度誤判某支 key 是 401「Vertex AI 需要 OAuth」，後來發現是自己的測試腳本
+>   把 3 支逗號分隔的 key 當一整串傳進去的 bug，跟帳號設定無關，已更正。）
 > - **M9 report.html**：靠 `markdown` 套件轉換既有 report.md，套用 DESIGN.md 同一份
 >   OKLCH 深色 token，避免報告內容邏輯重複一份。
 > - **M10 --domain uav**：`detector.py`/`findings.py`/`pipeline.py`/`report.py` 全部
