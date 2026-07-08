@@ -102,7 +102,7 @@ uv run python inspect_cli.py --input-dir sample_images --output output/ --html
 需求：[uv](https://docs.astral.sh/uv/)、repo 根目錄 `.env`（`GEMINI_API_KEY=...`，或 `GOOGLE_API_KEY=...` 亦可——`google-genai` 兩者都認，優先採用 `GOOGLE_API_KEY`；用 OpenAI/Claude 則另加 `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`，只用預設 Gemini 的話兩者皆非必要）。
 
 ```bash
-git clone <this-repo> && cd visual-inspection-reporter
+git clone https://github.com/tun0000/visual-inspection-reporter.git && cd visual-inspection-reporter
 uv sync
 
 # 權重（不隨 repo 發佈）：從 Hugging Face 下載 best.onnx 放進 weights/
