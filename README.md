@@ -95,7 +95,7 @@ uv run python inspect_cli.py --input-dir sample_images --output output/ --html
 
 ## 快速開始
 
-需求：[uv](https://docs.astral.sh/uv/)、repo 根目錄 `.env`（`GOOGLE_API_KEY=...`；用 OpenAI/Claude 則另加 `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`，只用預設 Gemini 的話兩者皆非必要）。
+需求：[uv](https://docs.astral.sh/uv/)、repo 根目錄 `.env`（`GEMINI_API_KEY=...`，或 `GOOGLE_API_KEY=...` 亦可——`google-genai` 兩者都認，優先採用 `GOOGLE_API_KEY`；用 OpenAI/Claude 則另加 `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`，只用預設 Gemini 的話兩者皆非必要）。
 
 ```bash
 git clone <this-repo> && cd visual-inspection-reporter
@@ -113,7 +113,7 @@ uv run python inspect_cli.py --input-dir ... --domain uav               # 換領
 uv run python inspect_cli.py --input-dir ... --batch-api                # Gemini Batch API（5 折、非即時）
 uv run python inspect_cli.py --input-dir ... --html                     # 額外產出 report.html
 
-# Gradio 介面（http://localhost:7860）
+# Gradio 介面（http://localhost:7860；供應商可切換，但 --domain/--batch-api 目前僅 CLI 提供）
 uv run python app.py
 
 # 測試（mock VLM，零網路）

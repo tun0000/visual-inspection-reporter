@@ -91,7 +91,7 @@ visual-inspection-reporter/
 ├── README.md  LICENSE(AGPL-3.0)  .gitignore  .env(從上層複製，不進 git)
 ├── weights/                  # gitignored；best.onnx 從專案 1 exports/ 複製
 ├── sample_images/            # gitignored（資料集授權 unknown）；附 fetch 說明
-├── assets/                   # 進 git：報告截圖、demo GIF 佔位
+├── assets/                   # 進 git：報告截圖、demo GIF（已錄製並接進 README）
 ├── src/inspector/
 │   ├── config.py             # 模型/價格表(含查證日期註解)、匯率、閾值、併發數、prompt 版號
 │   ├── detector.py           # ONNX Runtime；移植 e2e_onnx.py（letterbox/preprocess/postprocess）

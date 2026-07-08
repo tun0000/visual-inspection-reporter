@@ -2,7 +2,8 @@
 
 API 用法核對日期 2026-07-08（google-genai 2.10.0）：
 https://ai.google.dev/gemini-api/docs/structured-output
-金鑰由環境變數 GOOGLE_API_KEY 提供（genai.Client() 自動讀取）。
+金鑰由環境變數 GOOGLE_API_KEY 或 GEMINI_API_KEY 提供（genai.Client() 自動讀取，
+兩者皆有時優先採用 GOOGLE_API_KEY，見 google/genai/_api_client.py）。
 """
 
 from __future__ import annotations
