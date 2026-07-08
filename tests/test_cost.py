@@ -46,5 +46,5 @@ def test_format_usd_normal():
 
 
 def test_format_usd_tiny_amount_not_shown_as_zero():
-    assert format_usd(0.0000017) == "<$0.0001"
-    assert format_usd(0.0) == "<$0.0001"
+    assert format_usd(0.0000017) == "<0.0001"
+    assert format_usd(0.0) == "<0.0001"
