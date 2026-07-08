@@ -128,7 +128,6 @@ def render_report(batch: BatchResult, output_dir: Path) -> Path:
     lines = [
         "# PCB 巡檢報告",
         "",
-        f"- 產生時間：{batch.started.strftime('%Y-%m-%d %H:%M:%S %Z')}",
         f"- 影像數：{len(batch.results)}",
         f"- 偵測模型：YOLO26n ONNX（conf ≥ {batch.conf}）",
         f"- VLM：{batch.provider_name} / {batch.model_id}"
