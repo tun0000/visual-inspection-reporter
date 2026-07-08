@@ -6,9 +6,9 @@
 
 **展示重點：API 工程與系統整合**——供應商抽象層（Gemini / OpenAI 實測可切換）、結構化輸出（JSON schema + 解析防呆）、內容雜湊快取、指數退避重試、RPM 限速、實測 token 成本統計。
 
-![範例標註圖](assets/sample_annotated.jpg)
+![Demo：拖入 PCB 影像 → Gradio 線上產出巡檢報告](assets/demo.gif)
 
-<!-- demo GIF 佔位：Gradio 拖圖 → 線上報告 -->
+![範例標註圖：編號框 + 信心 + 類別](assets/sample_annotated.jpg)
 
 ## 為什麼「偵測用自訓小模型、理解與文字生成用 API 大模型」？
 
