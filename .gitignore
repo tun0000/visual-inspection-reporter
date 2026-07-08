@@ -1,6 +1,9 @@
 # secrets — never commit API keys
 .env
 
+# personal notes — not for GitHub
+INTERVIEW_PREP.md
+
 # large artifacts — published on Hugging Face Hub instead (see README)
 weights/
 *.onnx
