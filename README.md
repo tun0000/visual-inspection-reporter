@@ -83,7 +83,11 @@ uv run python inspect_cli.py --input-dir my_drone_photos --output output_uav/ --
 
 實測一張 182 個物件的密集路口空拍圖，`gemini-3.1-flash-lite` 一次 API 呼叫全數評估完畢，總評正確抓到「路口車流量大但秩序尚可、無立即安全風險」的情境判斷——PCB 領域的「嚴重度/判定」語意（瑕疵嚴重度、良品/不良品）在 prompt 換成巡邏語意（風險關注程度、是否需通報）後依然運作正常，這就是「domain profile 只換資料與措辭、工程骨架不動」的驗證。
 
-換領域只需要在 `src/inspector/domains.py` 加一個 `DomainProfile`（權重路徑、類別表、prompt、報告詞彙、已知侷限），不用碰 `detector.py`/`pipeline.py`/`report.py`。VisDrone 資料集僅限學術用途，本 repo 不隨附任何無人機影像，需自備測試圖。
+換領域只需要在 `src/inspector/domains.py` 加一個 `DomainProfile`（權重路徑、類別表、prompt、報告詞彙、已知侷限），不用碰 `detector.py`/`pipeline.py`/`report.py`。VisDrone 資料集僅限學術用途，本 repo 不隨附任何無人機影像，需自備測試圖。UAV 權重同樣不隨 repo 發佈，需另外下載到 `weights/`：
+
+```bash
+huggingface-cli download betty0/uav-traffic-vision yolo26s_visdrone_640.onnx --local-dir weights
+```
 
 ## 更多輸出格式
 
